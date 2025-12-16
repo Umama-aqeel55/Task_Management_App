@@ -1,0 +1,175 @@
+You are a senior full-stack React engineer.
+
+Build a COMPLETE, production-ready TASK MANAGEMENT APP (Trello-inspired)
+with drag-and-drop boards, team collaboration, progress tracking, and file uploads.
+
+=====================
+PROJECT OVERVIEW
+=====================
+Project Name: Task Management App
+
+A modern Trello-style project management application with:
+- Boards
+- Columns
+- Tasks
+- Drag & drop
+- Team collaboration
+- Real-time updates
+- Progress tracking
+
+UI must follow a dark, premium SaaS dashboard style.
+
+=====================
+TECH STACK (MANDATORY)
+=====================
+Frontend:
+- React (Vite)
+- Tailwind CSS
+- Context API (NO Redux)
+- React Router
+- @dnd-kit OR react-beautiful-dnd
+- Chart.js or Recharts
+- Firebase SDK
+
+Backend / Services:
+- Firebase Authentication
+- Firebase Firestore (database)
+- Firebase Storage (file uploads)
+
+=====================
+AUTHENTICATION
+=====================
+- Email & password login/signup
+- Firebase Auth
+- Protected routes
+- Auth context provider
+
+=====================
+CORE FEATURES
+=====================
+
+BOARDS & TASKS
+- Create boards
+- Create columns (Todo, In Progress, Done)
+- Create tasks inside columns
+- Edit / delete tasks
+- Assign task title, description, due date, priority
+- Drag & drop tasks between columns
+- Persist order in Firestore
+
+TEAM COLLABORATION
+- Invite members via email
+- Assign tasks to users
+- Display assigned user avatar
+- Role: Owner / Member
+
+REAL-TIME UPDATES
+- Use Firestore real-time listeners
+- Tasks move live for all users
+- Board updates reflect instantly
+
+PROGRESS TRACKING
+- Progress bar per board
+- Task completion percentage
+- Charts for completed vs pending tasks
+
+FILE UPLOAD
+- Upload files to tasks
+- Store files in Firebase Storage
+- Attach file URLs to tasks
+
+=====================
+DATABASE STRUCTURE (Firestore)
+=====================
+users:
+- id
+- name
+- email
+- photoURL
+
+boards:
+- id
+- title
+- ownerId
+- members[]
+- createdAt
+
+columns:
+- id
+- boardId
+- title
+- order
+
+tasks:
+- id
+- boardId
+- columnId
+- title
+- description
+- assignedTo
+- dueDate
+- priority
+- files[]
+- order
+- status
+
+=====================
+FRONTEND STRUCTURE
+=====================
+/src
+ ├── components
+ │   ├── Navbar.jsx
+ │   ├── Sidebar.jsx
+ │   ├── TaskCard.jsx
+ │   ├── Column.jsx
+ │   ├── Board.jsx
+ │   ├── ProgressBar.jsx
+ │   └── ProtectedRoute.jsx
+ ├── pages
+ │   ├── Login.jsx
+ │   ├── Register.jsx
+ │   ├── Dashboard.jsx
+ │   ├── BoardView.jsx
+ │   └── Profile.jsx
+ ├── context
+ │   ├── AuthContext.jsx
+ │   └── BoardContext.jsx
+ ├── services
+ │   ├── firebase.js
+ │   ├── authService.js
+ │   └── boardService.js
+ ├── utils
+ └── App.jsx
+
+=====================
+UI REQUIREMENTS
+=====================
+- Dark theme
+- Gradient heading
+- Glassmorphism cards
+- Smooth animations
+- Responsive (mobile + desktop)
+- Sidebar + top navbar
+- Buttons: modern, rounded, gradient
+
+=====================
+DELIVERABLES
+=====================
+1. Fully working React app
+2. Firebase configured
+3. Drag & drop functional
+4. Real-time collaboration enabled
+5. File upload working
+6. Clean folder structure
+7. README with setup instructions
+
+=====================
+IMPORTANT RULES
+=====================
+- NO placeholder logic
+- Everything must be functional
+- Code must be clean & readable
+- App must run perfectly on Replit
+- Use environment variables for Firebase keys
+
+Now generate the COMPLETE PROJECT with IMPLEMENTATION.
