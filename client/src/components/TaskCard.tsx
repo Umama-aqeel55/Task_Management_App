@@ -4,8 +4,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { Task, MOCK_USERS } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MoreHorizontal, Paperclip } from 'lucide-react';
+import { Calendar, MoreHorizontal, Paperclip, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface Props {
   task: Task;
@@ -38,75 +39,80 @@ export function TaskCard({ task, onClick }: Props) {
       <div
         ref={setNodeRef}
         style={style}
-        className="opacity-30 bg-card border border-primary/50 h-[150px] rounded-xl shadow-2xl cursor-grabbing"
+        className="opacity-30 bg-primary/10 border-2 border-primary/50 h-[150px] rounded-2xl shadow-2xl cursor-grabbing"
       />
     );
   }
 
   const priorityColors = {
-    low: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    medium: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    high: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    low: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]',
+    medium: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_15px_rgba(251,191,36,0.1)]',
+    high: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]',
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    // Prevent click when dragging
     if (isDragging) return;
     onClick?.(task);
   };
 
   return (
-    <div
+    <motion.div
+      layoutId={task.id}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
       onClick={handleClick}
-      className="group bg-card/40 hover:bg-card/60 backdrop-blur-sm border border-white/5 p-4 rounded-xl cursor-grab active:cursor-grabbing hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 mb-3"
+      className="group glass-card p-4 rounded-2xl cursor-grab active:cursor-grabbing mb-4 relative overflow-hidden"
     >
-      <div className="flex justify-between items-start mb-2">
-        <Badge variant="outline" className={cn("text-[10px] uppercase tracking-wider h-5 px-2 border", priorityColors[task.priority])}>
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      
+      <div className="flex justify-between items-start mb-3">
+        <Badge variant="outline" className={cn("text-[10px] font-bold uppercase tracking-[0.15em] h-5 px-2.5 rounded-full border", priorityColors[task.priority])}>
           {task.priority}
         </Badge>
-        <button className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-white transition-opacity">
+        <button className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-white transition-all p-1 hover:bg-white/5 rounded-lg">
           <MoreHorizontal className="h-4 w-4" />
         </button>
       </div>
 
-      <h3 className="font-medium text-slate-200 mb-1 leading-snug">{task.title}</h3>
+      <h3 className="font-semibold text-white mb-2 leading-tight group-hover:text-primary transition-colors text-sm">{task.title}</h3>
       {task.description && (
-        <p className="text-xs text-slate-500 line-clamp-2 mb-3 font-light">{task.description}</p>
+        <p className="text-[11px] text-slate-400 line-clamp-2 mb-4 font-normal leading-relaxed">{task.description}</p>
       )}
 
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         {task.tags.map(tag => (
-          <span key={tag} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5">
-            #{tag}
+          <span key={tag} className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/10 tracking-wider">
+            {tag.toUpperCase()}
           </span>
         ))}
       </div>
 
-      <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+      <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
         <div className="flex -space-x-2">
           {task.assignees.map((userId) => (
-            <Avatar key={userId} className="h-6 w-6 border-2 border-card">
+            <Avatar key={userId} className="h-7 w-7 border-2 border-[#0F172A] hover:scale-110 transition-transform cursor-pointer">
               <AvatarImage src={MOCK_USERS[userId]?.avatar} />
-              <AvatarFallback className="text-[8px] bg-slate-800 text-slate-400">{userId}</AvatarFallback>
+              <AvatarFallback className="text-[8px] bg-slate-800 text-slate-400 font-bold">{userId}</AvatarFallback>
             </Avatar>
           ))}
+          <div className="h-7 w-7 rounded-full bg-white/5 border-2 border-[#0F172A] flex items-center justify-center text-[8px] text-slate-500 font-bold">+2</div>
         </div>
         
         <div className="flex items-center gap-3 text-slate-500">
-          <div className="flex items-center gap-1 text-xs hover:text-slate-300">
+          <div className="flex items-center gap-1 text-[10px] hover:text-slate-300 font-bold">
+            <MessageSquare className="h-3 w-3" />
+            <span>5</span>
+          </div>
+          <div className="flex items-center gap-1 text-[10px] hover:text-slate-300 font-bold">
             <Paperclip className="h-3 w-3" />
             <span>2</span>
           </div>
-          <div className="flex items-center gap-1 text-xs hover:text-slate-300">
-            <Calendar className="h-3 w-3" />
-            <span>Dec 24</span>
-          </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -20,7 +20,8 @@ import { Task, Column } from '@/lib/types';
 import { TaskDetailModal } from './TaskDetailModal';
 
 export function KanbanBoard() {
-  const { activeBoard, moveTask, reorderColumn } = useBoard();
+  const { activeBoard, moveTask, reorderColumn, updateTask } = useBoard();
+
   const [activeColumn, setActiveColumn] = useState<Column | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -153,8 +154,9 @@ export function KanbanBoard() {
         task={selectedTask} 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        onUpdate={() => {}} 
+        onUpdate={updateTask} 
       />
+
     </DndContext>
   );
 }

@@ -1,63 +1,83 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Board, Task, INITIAL_BOARD, MOCK_USERS } from '@/lib/types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Board, Task, INITIAL_BOARD } from '@/lib/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { nanoid } from 'nanoid';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 
 interface BoardContextType {
   activeBoard: Board;
-  moveTask: (taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) => void;
-  reorderColumn: (activeId: string, overId: string) => void;
-  addTask: (columnId: string, task: Partial<Task>) => void;
-  deleteTask: (taskId: string) => void;
-  addColumn: (title: string) => void;
+  moveTask: (taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) => Promise<void>;
+  reorderColumn: (activeId: string, overId: string) => Promise<void>;
+  addTask: (columnId: string, task: Partial<Task>) => Promise<void>;
+  updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  addColumn: (title: string) => Promise<void>;
+  loading: boolean;
 }
 
 const BoardContext = createContext<BoardContextType | undefined>(undefined);
 
+const BOARD_ID = "default-board"; // For this demo, we use a single shared board
+
 export function BoardProvider({ children }: { children: ReactNode }) {
   const [activeBoard, setActiveBoard] = useState<Board>(INITIAL_BOARD);
+  const [loading, setLoading] = useState(true);
 
-  const moveTask = (taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) => {
-    setActiveBoard((prev) => {
-      const newBoard = { ...prev };
-      
-      // Remove from source
-      const sourceColumn = newBoard.columns[fromColumnId];
-      const sourceTaskIds = Array.from(sourceColumn.taskIds);
-      const oldIndex = sourceTaskIds.indexOf(taskId);
-      sourceTaskIds.splice(oldIndex, 1);
-      
-      // Add to destination
-      const destColumn = newBoard.columns[toColumnId];
-      const destTaskIds = fromColumnId === toColumnId ? sourceTaskIds : Array.from(destColumn.taskIds);
-      
-      destTaskIds.splice(newIndex, 0, taskId);
+  useEffect(() => {
+    // Listen to real-time updates from Firestore
+    const unsub = onSnapshot(doc(db, "boards", BOARD_ID), (docSnap) => {
+      if (docSnap.exists()) {
+        setActiveBoard(docSnap.data() as Board);
+      } else {
+        // Initialize board if it doesn't exist
+        setDoc(doc(db, "boards", BOARD_ID), INITIAL_BOARD);
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firestore error:", error);
+      setLoading(false);
+    });
 
-      newBoard.columns = {
-        ...newBoard.columns,
-        [fromColumnId]: { ...sourceColumn, taskIds: sourceTaskIds },
-        [toColumnId]: { ...destColumn, taskIds: destTaskIds },
-      };
-      
-      // Update task's columnId reference
-      newBoard.tasks[taskId] = { ...newBoard.tasks[taskId], columnId: toColumnId };
+    return () => unsub();
+  }, []);
 
-      return newBoard;
+  const moveTask = async (taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) => {
+    const newBoard = { ...activeBoard };
+    
+    // Remove from source
+    const sourceColumn = newBoard.columns[fromColumnId];
+    const sourceTaskIds = Array.from(sourceColumn.taskIds);
+    const oldIndex = sourceTaskIds.indexOf(taskId);
+    if (oldIndex !== -1) sourceTaskIds.splice(oldIndex, 1);
+    
+    // Add to destination
+    const destColumn = newBoard.columns[toColumnId];
+    const destTaskIds = fromColumnId === toColumnId ? sourceTaskIds : Array.from(destColumn.taskIds);
+    destTaskIds.splice(newIndex, 0, taskId);
+
+    newBoard.columns = {
+      ...newBoard.columns,
+      [fromColumnId]: { ...sourceColumn, taskIds: sourceTaskIds },
+      [toColumnId]: { ...destColumn, taskIds: destTaskIds },
+    };
+    
+    newBoard.tasks[taskId] = { ...newBoard.tasks[taskId], columnId: toColumnId };
+
+    await setDoc(doc(db, "boards", BOARD_ID), newBoard);
+  };
+
+  const reorderColumn = async (activeId: string, overId: string) => {
+    const oldIndex = activeBoard.columnOrder.indexOf(activeId);
+    const newIndex = activeBoard.columnOrder.indexOf(overId);
+    const newOrder = arrayMove(activeBoard.columnOrder, oldIndex, newIndex);
+    
+    await updateDoc(doc(db, "boards", BOARD_ID), {
+      columnOrder: newOrder
     });
   };
 
-  const reorderColumn = (activeId: string, overId: string) => {
-    setActiveBoard((prev) => {
-      const oldIndex = prev.columnOrder.indexOf(activeId);
-      const newIndex = prev.columnOrder.indexOf(overId);
-      return {
-        ...prev,
-        columnOrder: arrayMove(prev.columnOrder, oldIndex, newIndex),
-      };
-    });
-  };
-
-  const addTask = (columnId: string, taskData: Partial<Task>) => {
+  const addTask = async (columnId: string, taskData: Partial<Task>) => {
     const newTaskId = `t-${nanoid(4)}`;
     const newTask: Task = {
       id: newTaskId,
@@ -69,57 +89,48 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       tags: taskData.tags || [],
     };
 
-    setActiveBoard((prev) => {
-      return {
-        ...prev,
-        tasks: { ...prev.tasks, [newTaskId]: newTask },
-        columns: {
-          ...prev.columns,
-          [columnId]: {
-            ...prev.columns[columnId],
-            taskIds: [...prev.columns[columnId].taskIds, newTaskId],
-          },
-        },
-      };
-    });
+    const newBoard = { ...activeBoard };
+    newBoard.tasks[newTaskId] = newTask;
+    newBoard.columns[columnId].taskIds.push(newTaskId);
+
+    await setDoc(doc(db, "boards", BOARD_ID), newBoard);
   };
 
-  const deleteTask = (taskId: string) => {
-    setActiveBoard((prev) => {
-      const task = prev.tasks[taskId];
-      if (!task) return prev;
+  const updateTask = async (taskId: string, updates: Partial<Task>) => {
+    const newBoard = { ...activeBoard };
+    if (!newBoard.tasks[taskId]) return;
 
-      const column = prev.columns[task.columnId];
-      const newTaskIds = column.taskIds.filter(id => id !== taskId);
-      
-      const newTasks = { ...prev.tasks };
-      delete newTasks[taskId];
+    newBoard.tasks[taskId] = {
+      ...newBoard.tasks[taskId],
+      ...updates
+    };
 
-      return {
-        ...prev,
-        tasks: newTasks,
-        columns: {
-          ...prev.columns,
-          [task.columnId]: { ...column, taskIds: newTaskIds },
-        },
-      };
-    });
+    await setDoc(doc(db, "boards", BOARD_ID), newBoard);
   };
 
-  const addColumn = (title: string) => {
+  const deleteTask = async (taskId: string) => {
+    const newBoard = { ...activeBoard };
+    const task = newBoard.tasks[taskId];
+    if (!task) return;
+
+    const column = newBoard.columns[task.columnId];
+    newBoard.columns[task.columnId].taskIds = column.taskIds.filter(id => id !== taskId);
+    delete newBoard.tasks[taskId];
+
+    await setDoc(doc(db, "boards", BOARD_ID), newBoard);
+  };
+
+  const addColumn = async (title: string) => {
     const newColId = `c-${nanoid(4)}`;
-    setActiveBoard((prev) => ({
-      ...prev,
-      columns: {
-        ...prev.columns,
-        [newColId]: { id: newColId, title, taskIds: [] },
-      },
-      columnOrder: [...prev.columnOrder, newColId],
-    }));
+    const newBoard = { ...activeBoard };
+    newBoard.columns[newColId] = { id: newColId, title, taskIds: [] };
+    newBoard.columnOrder.push(newColId);
+
+    await setDoc(doc(db, "boards", BOARD_ID), newBoard);
   };
 
   return (
-    <BoardContext.Provider value={{ activeBoard, moveTask, reorderColumn, addTask, deleteTask, addColumn }}>
+    <BoardContext.Provider value={{ activeBoard, moveTask, reorderColumn, addTask, updateTask, deleteTask, addColumn, loading }}>
       {children}
     </BoardContext.Provider>
   );
